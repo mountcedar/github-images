@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import shutil
+
+import click
+import git
+
+
+def search_git_home(path):
+    try:
+        path = os.path.abspath(path)
+        if path == '/':
+            raise Exception()
+        for root, dirs, files in os.walk(path):
+            if '.git' in dirs:
+                return root
+            else:
+                dirname = os.path.dirname(root)
+                search_git_home(dirname)
+            break
+        return None
+    except:
+        print 'no git repository found here.'
+        return None
+
+
+def get_wiki_repos(path):
+    try:
+        githome = search_git_home(path)
+        if githome is None:
+            return None
+        return git.Repo(os.path.join(githome, '.wiki'))
+    except Exception, e:
+        print e
+        return None
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def handle(ctx):
+    if ctx.invoked_subcommand is None:
+        print ctx.get_help()
+    else:
+        #print('gonna invoke %s' % ctx.invoked_subcommand)
+        pass
+
+
+@click.command(help='add image to github wiki repository')
+@click.argument('target', required=True)
+def upload(target):
+    if not os.path.exists(target):
+        print '{} cannot be found.'.format(target)
+        return
+    current_dir = os.path.dirname(target)
+    target_base = os.path.basename(target)
+    githome = search_git_home(current_dir)
+    dst = os.path.join(githome, '.wiki', 'images', target_base)
+    shutil.copyfile(target, dst)
+
+    remote = get_wiki_repos(current_dir)
+    remote.index.add(dst)
+    remote.index.commit('add new image: {}'.format(target_base))
+    remote.remotes['origin'].push()
+
+    base, ext = os.path.splitext(remote.url)
+    print 'new image uploaded: {}'.format(
+        os.path.join(base, 'wiki', 'images', target_base)
+    )
+
+
+@click.command(help='remove image from github wiki repository')
+@click.argument('target', required=True)
+def remove(target):
+    if not os.path.exists(target):
+        print '{} cannot be found.'.format(target)
+        return
+    current_dir = os.path.dirname(target)
+    target_base = os.path.basename(target)
+    githome = search_git_home(current_dir)
+    src = os.path.join(githome, target_base)
+    os.remove(src)
+    remote = get_wiki_repos(current_dir)
+    remote.index.commit('remove image: {}'.format(target_base))
+    remote.remotes['origin'].push()
+
+
+@click.command(help='initialize from github wiki repository')
+def init():
+    current_dir = os.path.abspath('.')
+    githome = search_git_home('.')
+    if githome is None:
+        sys.exit(1)
+    print 'home: ', githome
+    try:
+        repo = git.Repo(githome)
+        remote = repo.remote()
+        print 'remote: ', type(remote), remote, remote.url
+    except ValueError, e:
+        print e
+        print 'no remote repository found.'
+        sys.exit(1)
+    base, ext = os.path.splitext(remote.url)
+    wikirepo_url = base + '.wiki.git'
+
+    os.chdir(githome)
+    images_dir = os.path.join('.wiki', 'images')
+    if not os.path.exists(images_dir):
+        remotewiki = git.Repo.clone_from(wikirepo_url, to_path='.wiki')
+        os.makedirs(images_dir)
+        os.chdir('.wiki')
+        remotewiki.index.add(['images', ])
+        remotewiki.index.commit('add images directory')
+        remotewiki.remotes['origin'].push()
+        print '.wiki/images created'
+    print 'wiki repository initialized'
+    os.chdir(current_dir)
+
+
+handle.add_command(init)
+handle.add_command(upload)
+handle.add_command(remove)
+
+
+if __name__ == '__main__':
+    handle()
