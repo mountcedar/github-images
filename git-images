@@ -37,7 +37,23 @@ def get_wiki_repos(path):
         return None
 
 
-@click.group(invoke_without_command=True)
+class AliasedGroup(click.Group):
+    def get_command(self, ctx, cmd_name):
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+
+        if cmd_name == 'ls':
+            return click.Group.get_command(self, ctx, 'list')
+        elif cmd_name == 'up':
+            return click.Group.get_command(self, ctx, 'upload')
+        elif cmd_name == 'rm':
+            return click.Group.get_command(self, ctx, 'remove')
+
+        return None
+
+
+@click.group(cls=AliasedGroup, invoke_without_command=True)
 @click.pass_context
 def handle(ctx):
     if ctx.invoked_subcommand is None:
@@ -45,6 +61,18 @@ def handle(ctx):
     else:
         #print('gonna invoke %s' % ctx.invoked_subcommand)
         pass
+
+
+@click.command(help='list images on github wiki repository')
+def list():
+    githome = search_git_home('.')
+    dst = os.path.join(githome, '.wiki', 'images')
+    for root, dirs, files in os.walk(dst):
+        for f in files:
+            print f
+        if not files:
+            print 'no images found.'
+        break
 
 
 @click.command(help='add image to github wiki repository')
@@ -86,7 +114,7 @@ def remove(target):
     remote.remotes['origin'].push()
 
 
-@click.command(help='initialize from github wiki repository')
+@click.command(help='initialize with github wiki repository')
 def init():
     current_dir = os.path.abspath('.')
     githome = search_git_home('.')
@@ -119,6 +147,7 @@ def init():
 
 
 handle.add_command(init)
+handle.add_command(list)
 handle.add_command(upload)
 handle.add_command(remove)
 
