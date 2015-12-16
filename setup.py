@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 r'''
-sound source identification package using hark.
+setup for github-images
 '''
 
 __author__ = "Osamu Sugiyama"
@@ -28,31 +28,11 @@ setup(
     author_email=__author_email__,
     url='',
     scripts=['git-images', ],
-    # package_dir={'': 'src'},
-    # packages=find_packages('src'),
-    # package_data={
-    #     '': [
-    #         'ssi/rpca/*.m',
-    #         'ssi/rpca/inexact_alm_rpca/*.m',
-    #         'ssi/rpca/inexact_alm_rpca/PROPACK/*.m',
-    #         'ssi/simulation/*.m',
-    #         'ssi/sss_network/config/*',
-    #         'ssi/sss_network/networks/*.n',
-    #     ]
-    # },
-    # namespace_packages=['pyhark'],
     long_description=__doc__,
     include_package_data=True,
     install_requires=[
         'click',
-        # 'oct2py',
-        # 'numpy',
-        # 'scipy',
-        # 'matplotlib',
-        # 'chainer',
-        # 'theano',
-        # 'features'
-        # 'sklearn'
+        'gitpython'
     ],
     zip_safe=False
 )
